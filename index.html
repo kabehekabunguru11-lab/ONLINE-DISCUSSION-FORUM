@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head><title>E-Forum</title><style>
+*{margin:0;padding:0;box-sizing:border-box;}:root{--primary:#4f46e5;}
+body{font-family:system-ui;background:#f8fafc;}.container{max-width:1200px;margin:0 auto;padding:0 20px;}
+header{background:white;box-shadow:0 4px 6px -1px rgba(0,0,0,0.1);padding:1rem 0;}
+.navbar{display:flex;justify-content:space-between;align-items:center;}
+.logo{font-size:1.8rem;font-weight:bold;color:var(--primary);text-decoration:none;}
+.nav-links{display:flex;gap:20px;}.btn{padding:10px 20px;border:none;border-radius:8px;cursor:pointer;}
+.btn-primary{background:var(--primary);color:white;}.modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;}.modal.active{display:flex;}.modal-content{background:white;padding:30px;border-radius:8px;max-width:500px;width:90%;}
+.form-control{width:100%;padding:12px;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:20px;}
+</style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+<div id="notification" style="position:fixed;top:20px;right:20px;padding:15px;border-radius:8px;color:white;z-index:3000;transform:translateX(150%);transition:0.3s;" class="notification"></div>
+
+<!-- Modals -->
+<div id="loginModal" class="modal"><div class="modal-content"><div class="modal-header"><h3><i class="fas fa-sign-in-alt"></i> Login</h3><button class="close-modal" onclick="E.closeModal('loginModal')">&times;</button></div>
+<form id="loginForm"><div class="form-group"><label>Email</label><input type="email" id="loginEmail" class="form-control" required></div>
+<div class="form-group"><label>Password</label><input type="password" id="loginPassword" class="form-control" required></div>
+<button type="submit" class="btn btn-primary" style="width:100%">Login</button></form>
+<p style="margin-top:15px;text-align:center">Don't have an account? <a href="#" onclick="E.showRegisterModal()">Register here</a></p></div></div>
+
+<div id="registerModal" class="modal"><div class="modal-content"><div class="modal-header"><h3><i class="fas fa-user-plus"></i> Register</h3><button class="close-modal" onclick="E.closeModal('registerModal')">&times;</button></div>
+<form id="registerForm"><div class="form-group"><label>Username</label><input type="text" id="regUsername" class="form-control" required></div>
+<div class="form-group"><label>Email</label><input type="email" id="regEmail" class="form-control" required></div>
+<div class="form-group"><label>Password</label><input type="password" id="regPassword" class="form-control" required></div>
+<div class="form-group"><label>Confirm Password</label><input type="password" id="regConfirmPassword" class="form-control" required></div>
+<button type="submit" class="btn btn-primary" style="width:100%">Register</button></form></div></div>
+
+<div id="createForumModal" class="modal"><div class="modal-content"><div class="modal-header"><h3><i class="fas fa-plus-circle"></i> Create Forum</h3><button class="close-modal" onclick="E.closeModal('createForumModal')">&times;</button></div>
+<form id="createForumForm"><div class="form-group"><label>Title</label><input type="text" id="forumTitle" class="form-control" required></div>
+<div class="form-group"><label>Description</label><textarea id="forumDescription" class="form-control" style="min-height:100px" required></textarea></div>
+<div class="form-group"><label>Category</label><select id="forumCategory" class="form-control"><option value="General">General</option><option value="Tech">Tech</option><option value="Gaming">Gaming</option></select></div>
+<button type="submit" class="btn btn-primary" style="width:100%">Create Forum</button></form></div></div>
+
+<header><div class="container"><nav class="navbar"><a href="#" class="logo" onclick="E.showHome()"><i class="fas fa-comments"></i> E-Forum</a>
+<div class="nav-links"><a href="#" onclick="E.showHome()">Home</a><a href="#" onclick="E.showForums()">Forums</a><a href="#" onclick="E.showProfile()">Profile</a>
+<div id="authButtons"></div></div></nav></div></header>
+
+<main class="container"><div id="content"></div></main>
+<footer style="background:#1e293b;color:white;padding:40px 0;margin-top:40px;"><div class="container"><div style="text-align:center;">E-Forum - Complete Self-Contained Platform</div></div></footer>
+
+<script>
+const E = {
+    db: { init() {
+        if(!localStorage.eforum_users) localStorage.setItem('eforum_users', JSON.stringify([{id:1,username:'admin',email:'admin@eforum.com',password:'admin123',role:'admin',createdAt:new Date().toISOString()}]));
+        if(!localStorage.eforum_forums) localStorage.setItem('eforum_forums', JSON.stringify([{id:1,title:'Welcome!',description:'Introduce yourself',category:'General',createdBy:1,createdAt:new Date().toISOString(),posts:1,views:50}]));
+        if(!localStorage.eforum_posts) localStorage.setItem('eforum_posts', JSON.stringify([{id:1,forumId:1,userId:1,title:'Hello',content:'Welcome everyone!',createdAt:new Date().toISOString(),likes:5,replies:2}]));
+    },
+    getUsers(){return JSON.parse(localStorage.eforum_users||'[]')},
+    getUserByEmail(e){return this.getUsers().find(u=>u.email===e)},
+    createUser(d){const u=this.getUsers();d.id=u.length+1;d.role='user';d.createdAt=new Date().toISOString();u.push(d);localStorage.eforum_users=JSON.stringify(u);return d},
+    getForums(){return JSON.parse(localStorage.eforum_forums||'[]')},
+    getForumById(i){return this.getForums().find(f=>f.id==i)},
+    createForum(d){const f=this.getForums();d.id=f.length+1;d.posts=0;d.views=0;d.createdAt=new Date().toISOString();f.push(d);localStorage.eforum_forums=JSON.stringify(f);return d},
+    getPosts(){return JSON.parse(localStorage.eforum_posts||'[]')},
+    getPostsByForum(i){return this.getPosts().filter(p=>p.forumId==i)},
+    createPost(d){const p=this.getPosts();d.id=p.length+1;d.likes=0;d.replies=0;d.createdAt=new Date().toISOString();p.push(d);localStorage.eforum_posts=JSON.stringify(p);return d},
+    getUserPosts(i){return this.getPosts().filter(p=>p.userId==i)}},
+    
+    auth: {currentUser:JSON.parse(localStorage.currentUser||'null'),
+    login(e,p){const u=E.db.getUserByEmail(e);if(u&&u.password===p){this.currentUser=u;localStorage.currentUser=JSON.stringify(u);return{success:true}}return{success:false,message:'Invalid'}},
+    register(u,e,p){if(E.db.getUserByEmail(e))return{success:false,message:'Exists'};const user=E.db.createUser({username:u,email:e,password:p});this.currentUser=user;localStorage.currentUser=JSON.stringify(user);return{success:true}},
+    logout(){this.currentUser=null;localStorage.removeItem('currentUser')},isLoggedIn(){return!!this.currentUser},getUser(){return this.currentUser}},
+    
+    showNotification(m,t){const n=document.getElementById('notification');n.textContent=m;n.className=`notification ${t} show`;setTimeout(()=>n.classList.remove('show'),3000)},
+    showModal(i){document.getElementById(i).classList.add('active')},
+    closeModal(i){document.getElementById(i).classList.remove('active')},
+    showRegisterModal(){this.closeModal('loginModal');this.showModal('registerModal')},
+    getUserName(i){const u=this.db.getUserById(i);return u?u.username:'Unknown'},
+    
+    updateAuthButtons(){const b=document.getElementById('authButtons');if(this.auth.isLoggedIn()){const u=this.auth.getUser();b.innerHTML=`<div class="user-info"><div class="avatar" style="width:40px;height:40px;border-radius:50%;background:var(--primary);color:white;display:flex;align-items:center;justify-content:center;">${u.username.charAt(0).toUpperCase()}</div><span>${u.username}</span><button class="btn btn-danger" onclick="E.logout()">Logout</button></div>`}
+    else{b.innerHTML=`<button class="btn btn-primary" onclick="E.showModal('loginModal')">Login</button><button class="btn btn-success" onclick="E.showModal('registerModal')">Register</button>`}},
+    
+    showHome(){let f=this.db.getForums().slice(0,3);let h=`<section style="background:linear-gradient(135deg,#4f46e5,#2d23b6);color:white;padding:80px 0;text-align:center;border-radius:8px;margin:20px 0;"><h1 style="font-size:3rem;">E-Forum</h1><p>Self-contained discussion platform</p>`;if(!this.auth.isLoggedIn())h+=`<div><button class="btn btn-primary" onclick="E.showModal('registerModal')">Join Now</button><button class="btn btn-light" onclick="E.showModal('loginModal')">Login</button></div>`;h+=`</section><section style="background:white;padding:30px;border-radius:8px;"><div style="display:flex;justify-content:space-between;"><h2>Forums</h2>${this.auth.isLoggedIn()?'<button class="btn btn-primary" onclick="E.showModal(\'createForumModal\')">+ Create</button>':''}</div><div class="forums-list">`;
+        if(f.length)f.forEach(x=>h+=`<div style="background:#f8fafc;padding:20px;border-radius:8px;margin-bottom:15px;"><a href="#" onclick="E.showForum(${x.id})" style="font-size:1.2rem;font-weight:600;color:#1e293b;text-decoration:none;">${x.title}</a><p>${x.description}</p><div style="display:flex;gap:15px;color:#64748b;">${x.posts||0} posts</div></div>`);
+        else h+=`<p style="text-align:center;">No forums yet</p>`;
+        h+=`</div></section>`;document.getElementById('content').innerHTML=h},
+    
+    showForums(){let f=this.db.getForums();let h=`<div style="background:white;padding:30px;border-radius:8px;margin-top:20px;"><h2>All Forums</h2><div class="forums-list">`;
+        f.forEach(x=>h+=`<div style="background:#f8fafc;padding:20px;border-radius:8px;margin-bottom:15px;"><a href="#" onclick="E.showForum(${x.id})" style="font-size:1.2rem;font-weight:600;">${x.title}</a><p>${x.description}</p></div>`);
+        h+=`</div></div>`;document.getElementById('content').innerHTML=h},
+    
+    showForum(i){let f=this.db.getForumById(i);if(!f)return this.showForums();let p=this.db.getPostsByForum(i);let h=`<div style="margin-top:20px;"><div style="background:white;padding:30px;border-radius:8px;"><h1>${f.title}</h1><p>${f.description}</p>`;
+        if(this.auth.isLoggedIn())h+=`<div style="margin-top:20px;"><h3>New Post</h3><input type="text" id="postTitle" placeholder="Title" style="width:100%;padding:12px;margin-bottom:10px;"><textarea id="postContent" placeholder="Content" style="width:100%;padding:12px;min-height:100px;"></textarea><button class="btn btn-primary" onclick="E.createPost(${i})">Post</button></div>`;
+        h+=`</div><div style="background:white;padding:30px;border-radius:8px;margin-top:20px;"><h2>Posts (${p.length})</h2>`;
+        if(p.length)p.forEach(x=>h+=`<div style="background:#f8fafc;padding:20px;margin-bottom:15px;border-left:4px solid #4f46e5;"><h3>${x.title}</h3><p>${x.content}</p><div>By: ${this.getUserName(x.userId)}</div></div>`);
+        else h+=`<p>No posts yet</p>`;
+        h+=`</div></div>`;document.getElementById('content').innerHTML=h},
+    
+    showProfile(){if(!this.auth.isLoggedIn()){this.showNotification('Login first','error');return this.showModal('loginModal')}let u=this.auth.getUser();let up=this.db.getUserPosts(u.id);let h=`<div style="background:white;padding:40px;border-radius:8px;margin-top:20px;"><h1>${u.username}</h1><p>${u.email}</p><p>Posts: ${up.length}</p></div>`;document.getElementById('content').innerHTML=h},
+    
+    createPost(i){const t=document.getElementById('postTitle')?.value;const c=document.getElementById('postContent')?.value;if(!t||!c)return this.showNotification('Fill all fields','error');this.db.createPost({forumId:i,userId:this.auth.getUser().id,title:t,content:c});this.showNotification('Post created!','success');this.showForum(i)},
+    
+    logout(){this.auth.logout();this.updateAuthButtons();this.showHome();this.showNotification('Logged out','success')},
+    
+    init(){this.db.init();this.updateAuthButtons();this.showHome();this.setupListeners()},
+    
+    setupListeners(){
+        document.getElementById('loginForm')?.addEventListener('submit',(e)=>{e.preventDefault();const em=document.getElementById('loginEmail').value;const pw=document.getElementById('loginPassword').value;const r=this.auth.login(em,pw);if(r.success){this.showNotification('Login OK','success');this.updateAuthButtons();this.closeModal('loginModal');this.showHome()}else this.showNotification(r.message,'error')});
+        document.getElementById('registerForm')?.addEventListener('submit',(e)=>{e.preventDefault();const u=document.getElementById('regUsername').value;const em=document.getElementById('regEmail').value;const pw=document.getElementById('regPassword').value;const cf=document.getElementById('regConfirmPassword').value;if(pw!==cf)return this.showNotification('Passwords mismatch','error');const r=this.auth.register(u,em,pw);if(r.success){this.showNotification('Registered!','success');this.updateAuthButtons();this.closeModal('registerModal');this.showHome()}else this.showNotification(r.message,'error')});
+        document.getElementById('createForumForm')?.addEventListener('submit',(e)=>{e.preventDefault();const t=document.getElementById('forumTitle').value;const d=document.getElementById('forumDescription').value;const c=document.getElementById('forumCategory').value;if(!this.auth.isLoggedIn())return this.showNotification('Login first','error');const f=this.db.createForum({title:t,description:d,category:c,createdBy:this.auth.getUser().id});if(f){this.showNotification('Forum created!','success');this.closeModal('createForumModal');this.showForum(f.id)}});
+    }
+};
+window.addEventListener('click',(e)=>{if(e.target.classList.contains('modal'))e.target.classList.remove('active')});
+E.init();
+</script>
+</body>
+</html>
